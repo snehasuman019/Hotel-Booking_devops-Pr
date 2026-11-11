@@ -1,0 +1,35 @@
+
+name: Hotel Booking CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["Hotel Booking CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          fingerprint: "SHA256:fnR9K/OLh1CfbXPZKWOOWAi8vcQsGiqMoNRsE4/QFvs"
+          script: |
+            set -e
+            cd ~/Hotel-Booking_devops-Pr
+            git pull origin main
+            docker compose config -q
+            docker compose up -d --build --no-deps api
+            docker compose ps
+            curl --fail http://127.0.0.1:8000/health
