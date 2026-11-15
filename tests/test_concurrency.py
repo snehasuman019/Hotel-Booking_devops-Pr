@@ -1,5 +1,6 @@
 import os
 import json
+import ssl
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor
@@ -7,6 +8,7 @@ from threading import Barrier
 
 BASE_URL = os.getenv("APP_URL", "http://127.0.0.1:8000").rstrip("/")
 URL = f"{BASE_URL}/reservations"
+SSL_CTX = ssl._create_unverified_context() if URL.startswith("https") else None
 
 # Both requests will start together
 barrier = Barrier(2)
@@ -33,7 +35,7 @@ def make_booking(request_number):
     barrier.wait()
 
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=20, context=SSL_CTX) as response:
             return {
                 "request": request_number,
                 "status": response.status,
@@ -45,6 +47,12 @@ def make_booking(request_number):
             "request": request_number,
             "status": error.code,
             "body": error.read().decode("utf-8")
+        }
+    except Exception as error:
+        return {
+            "request": request_number,
+            "status": 500,
+            "body": str(error)
         }
 
 
