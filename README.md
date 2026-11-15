@@ -423,7 +423,15 @@ python -m pytest -v
 
 ---
 
-## 16. Final Demonstration & Verification Checklist
+## 16. Operational Runbooks & Assessment Defense
+
+Detailed operational and interview preparation documentation has been compiled in dedicated runbooks:
+* 📘 [Monitoring, Logging & Rollback Runbook](docs/MONITORING_AND_ROLLBACK_GUIDE.md): Host resource checks, Docker logging limits, live query troubleshooting, and automated rollback scripts.
+* 🎓 [Assessment Defense & Technical Interview Guide](docs/ASSESSMENT_DEFENSE_AND_INTERVIEW_PREP.md): Architectural decisions explained (FastAPI vs. Django, row locking, zero-SSH deployment, disaster recovery) with 8 comprehensive interview questions and model answers.
+
+---
+
+## 17. Final Demonstration & Verification Checklist
 
 - [x] Application health endpoint returns `{"status":"healthy"}` over HTTPS (`https://13.48.120.203/health`).
 - [x] Active hotel rooms list successfully loaded (`https://13.48.120.203/rooms`).
@@ -439,7 +447,7 @@ python -m pytest -v
 
 ---
 
-## 17. Resume-Ready Project Summary
+## 18. Resume-Ready Project Summary
 
 **Cloud DevOps & Platform Engineer — Hotel Booking Platform**
 * Architected and deployed an automated, containerized hotel reservation platform on AWS (EC2, S3, IAM, SSM) serving asynchronous REST APIs via FastAPI and PostgreSQL 16.
