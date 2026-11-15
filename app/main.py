@@ -1,8 +1,9 @@
-
+import logging
+import time
 from datetime import date
 from uuid import uuid4
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -14,11 +15,30 @@ from app.schemas import (
     ReservationResponse
 )
 
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("hotel_booking")
+
 app = FastAPI(
     title="Hotel Booking Platform",
     description="Hotel Room Availability and Reservation API",
     version="1.0.0"
 )
+
+# HTTP Request/Response logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration_ms = round((time.time() - start_time) * 1000, 2)
+    logger.info(
+        f"HTTP {request.method} {request.url.path} - Status: {response.status_code} ({duration_ms}ms)"
+    )
+    return response
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -33,32 +53,52 @@ def home():
     }
 
 
-# 2. Health check
+# 2. Health check (Liveness probe)
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
 
 
-# 3. Database connection test
+# 3. Readiness check (Verifies application & database readiness)
+@app.get("/ready")
+def readiness_check():
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return {
+            "status": "ready",
+            "database": "connected"
+        }
+    except Exception as e:
+        logger.error(f"Readiness check failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Database readiness check failed"
+        )
+
+
+# 4. Database connection test
 @app.get("/db-test")
 def database_test():
     try:
         with engine.connect() as connection:
-            result = connection.execute(
-                text("SELECT current_database()")
-            )
+            try:
+                db_name = connection.execute(text("SELECT current_database()")).scalar()
+            except Exception:
+                db_name = "connected"
             return {
                 "status": "connected",
-                "database": result.scalar()
+                "database": db_name
             }
-    except Exception:
+    except Exception as e:
+        logger.error(f"Database connection test failed: {e}")
         raise HTTPException(
             status_code=503,
             detail="Database connection failed"
         )
 
 
-# 4. Get all active rooms
+# 5. Get all active rooms
 @app.get("/rooms", response_model=list[RoomResponse])
 def get_rooms(db: Session = Depends(get_db)):
     return (
@@ -69,7 +109,7 @@ def get_rooms(db: Session = Depends(get_db)):
     )
 
 
-# 5. Get a particular room
+# 6. Get a particular room
 @app.get("/rooms/{room_id}", response_model=RoomResponse)
 def get_room(
     room_id: int,
@@ -78,6 +118,7 @@ def get_room(
     room = db.query(Room).filter(Room.id == room_id).first()
 
     if not room:
+        logger.warning(f"Room query failed: Room {room_id} not found")
         raise HTTPException(
             status_code=404,
             detail="Room not found"
@@ -86,7 +127,7 @@ def get_room(
     return room
 
 
-# 6. Create reservation with concurrency protection
+# 7. Create reservation with concurrency protection
 @app.post(
     "/reservations",
     response_model=ReservationResponse,
@@ -98,13 +139,16 @@ def create_reservation(
 ):
     # Validate booking dates
     if reservation.check_out <= reservation.check_in:
+        logger.warning(
+            f"Reservation rejection: check_out ({reservation.check_out}) <= check_in ({reservation.check_in})"
+        )
         raise HTTPException(
             status_code=400,
             detail="Check-out must be after check-in"
         )
 
     try:
-        # Lock the room row until the transaction completes
+        # Lock the room row until the transaction completes (row-level locking)
         room = (
             db.query(Room)
             .filter(
@@ -116,6 +160,7 @@ def create_reservation(
         )
 
         if not room:
+            logger.warning(f"Reservation failed: Room {reservation.room_id} not found or inactive")
             raise HTTPException(
                 status_code=404,
                 detail="Room not found or inactive"
@@ -134,6 +179,10 @@ def create_reservation(
         )
 
         if existing_booking:
+            logger.warning(
+                f"Reservation conflict: Room {reservation.room_id} already booked for window "
+                f"[{reservation.check_in} -> {reservation.check_out}]. Conflicting ID: {existing_booking.id}"
+            )
             raise HTTPException(
                 status_code=409,
                 detail="Room is already booked for these dates"
@@ -154,18 +203,24 @@ def create_reservation(
         db.commit()
         db.refresh(new_reservation)
 
+        logger.info(
+            f"Reservation confirmed: Ref={new_reservation.reference}, Room={new_reservation.room_id}, "
+            f"Dates=[{new_reservation.check_in} -> {new_reservation.check_out}]"
+        )
+
         return new_reservation
 
     except HTTPException:
         db.rollback()
         raise
 
-    except Exception:
+    except Exception as e:
         db.rollback()
+        logger.error(f"Unexpected error during reservation creation: {e}", exc_info=True)
         raise
 
 
-# 7. Check room availability
+# 8. Check room availability
 @app.get(
     "/availability",
     response_model=list[RoomResponse]
@@ -177,6 +232,7 @@ def check_availability(
 ):
     # Validate dates
     if check_out <= check_in:
+        logger.warning(f"Availability check invalid dates: {check_in} -> {check_out}")
         raise HTTPException(
             status_code=400,
             detail="Check-out date must be after check-in date"

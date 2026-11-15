@@ -1,21 +1,23 @@
-
+import os
 import json
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
-URL = "http://127.0.0.1:8000/reservations"
+BASE_URL = os.getenv("APP_URL", "http://127.0.0.1:8000").rstrip("/")
+URL = f"{BASE_URL}/reservations"
 
 # Both requests will start together
 barrier = Barrier(2)
 
 booking_data = {
-    "room_id": 5,
+    "room_id": 1,
     "guest_name": "Concurrency Guest",
     "check_in": "2026-12-20",
     "check_out": "2026-12-23"
 }
+
 
 def make_booking(request_number):
     data = json.dumps(booking_data).encode("utf-8")
@@ -47,7 +49,7 @@ def make_booking(request_number):
 
 
 if __name__ == "__main__":
-    print("Starting simultaneous booking test...\n")
+    print(f"Starting simultaneous booking test against {URL}...\n")
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = [
@@ -65,6 +67,6 @@ if __name__ == "__main__":
     statuses = sorted(result["status"] for result in results)
 
     if statuses == [201, 409]:
-        print("SUCCESS: Concurrency protection is working!")
+        print("SUCCESS: Concurrency protection is working! Exactly one booking succeeded and one was rejected.")
     else:
-        print("UNEXPECTED RESULT: Review the API and database logs.")
+        print(f"RESULT: Status codes returned: {statuses}")

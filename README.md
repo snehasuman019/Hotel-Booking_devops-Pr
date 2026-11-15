@@ -423,9 +423,15 @@ python -m pytest -v
 
 ---
 
-## 16. Operational Runbooks & Assessment Defense
+## 16. Comprehensive Documentation Suite
 
-Detailed operational and interview preparation documentation has been compiled in dedicated runbooks:
+Detailed operational, architectural, security, and recovery documentation is organized in dedicated guides:
+* 🏛️ [System Architecture & Data Flow](docs/architecture.md): High-level system design, multi-container interactions, and AWS cloud topology.
+* 📊 [Architecture Diagrams](docs/architecture-diagram.md): Complete Mermaid diagrams (Cloud VPC topology, Database ER model, Concurrency row-locking sequence).
+* 🛠️ [Operations & Troubleshooting Runbook](docs/runbook.md): Service lifecycle management, health probes, log inspection, and troubleshooting guides for 5+ failure scenarios.
+* 💾 [Database Backup & Restoration Runbook](docs/backup-restore.md): Automated S3 backup lifecycle, retention policies, and non-destructive disaster recovery procedures.
+* 🔒 [Security & Compliance Architecture](docs/security.md): Network isolation, TLS encryption, keyless GitHub OIDC, container hardening, and PII protection.
+* 🧪 [Testing & Quality Assurance Guide](docs/testing.md): Automated Pytest suite (16 tests), concurrency test harness, and CI/CD validation.
 * 📘 [Monitoring, Logging & Rollback Runbook](docs/MONITORING_AND_ROLLBACK_GUIDE.md): Host resource checks, Docker logging limits, live query troubleshooting, and automated rollback scripts.
 * 🎓 [Assessment Defense & Technical Interview Guide](docs/ASSESSMENT_DEFENSE_AND_INTERVIEW_PREP.md): Architectural decisions explained (FastAPI vs. Django, row locking, zero-SSH deployment, disaster recovery) with 8 comprehensive interview questions and model answers.
 
