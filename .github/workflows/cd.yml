@@ -29,6 +29,7 @@ jobs:
           EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
         run: |
           set -euo pipefail
+          EC2_INSTANCE_ID=$(echo "$EC2_INSTANCE_ID" | tr -d '[:space:]')
 
           REMOTE_SCRIPT=$(cat <<'EOF'
           set -e
