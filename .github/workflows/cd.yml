@@ -31,32 +31,13 @@ jobs:
           set -euo pipefail
           EC2_INSTANCE_ID=$(echo "$EC2_INSTANCE_ID" | tr -d '[:space:]')
 
-          REMOTE_SCRIPT=$(cat <<'EOF'
-          set -e
-          sudo -u ubuntu -H bash -lc '
-            set -e
-            cd /home/ubuntu/Hotel-Booking_devops-Pr
-            git pull origin main
-            docker compose config -q
-            docker compose up -d --build --no-deps api
-
-            for i in $(seq 1 20); do
-              if curl --fail http://127.0.0.1:8000/health; then
-                echo "Deployment health check passed."
-                docker compose ps
-                exit 0
-              fi
-              sleep 3
-            done
-
-            echo "Health check failed."
-            docker compose ps
-            exit 1
-          '
-          EOF
-          )
-          PARAMETERS=$(jq -n --arg command "$REMOTE_SCRIPT" \
-            '{commands: [$command]}')
+          PARAMETERS=$(jq -n '{
+            commands: [
+              "set -euo pipefail",
+              "sudo -u ubuntu -H git -C /home/ubuntu/Hotel-Booking_devops-Pr pull origin main",
+              "sudo -u ubuntu -H bash /home/ubuntu/Hotel-Booking_devops-Pr/scripts/deploy.sh"
+            ]
+          }')
 
           echo "Deployment Target EC2 Instance: $EC2_INSTANCE_ID"
           echo "Caller Identity:"
