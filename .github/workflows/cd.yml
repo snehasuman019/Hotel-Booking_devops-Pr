@@ -68,7 +68,8 @@ jobs:
             --parameters "$PARAMETERS" \
             --query "Command.CommandId" \
             --output text 2>&1); then
-            echo "::error::SSM SendCommand failed: $COMMAND_OUTPUT"
+            ONE_LINE_ERR=$(echo "$COMMAND_OUTPUT" | tr -s '\r\n' ' ')
+            echo "::error title=SSM_Deployment_Error::$ONE_LINE_ERR"
             echo "### ❌ Deployment Failed at SSM SendCommand" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             echo "$COMMAND_OUTPUT" >> "$GITHUB_STEP_SUMMARY"
