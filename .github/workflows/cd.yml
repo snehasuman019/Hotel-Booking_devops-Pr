@@ -33,7 +33,7 @@ jobs:
 
           PARAMETERS=$(jq -n '{
             commands: [
-              "set -euo pipefail",
+              "set -e",
               "sudo -u ubuntu -H git -C /home/ubuntu/Hotel-Booking_devops-Pr pull origin main",
               "sudo -u ubuntu -H bash /home/ubuntu/Hotel-Booking_devops-Pr/scripts/deploy.sh"
             ]
